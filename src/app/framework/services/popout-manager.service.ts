@@ -1,16 +1,16 @@
 /**
  * Pop-out Manager Service
  *
- * Encapsulates pop-out window lifecycle management including:
- * - Opening and tracking pop-out windows
- * - BroadcastChannel setup and message handling
- * - State broadcasting to pop-outs
- * - Window close detection
+ * Manages pop-out window lifecycle using Angular CDK Portals.
+ * Opens `about:blank` windows and renders Angular components into them
+ * via DomPortalOutlet — no full app bootstrap, no router, no auth guards.
  *
- * This service extracts pop-out management from DiscoverComponent for cleaner code.
+ * The parent window's Angular context drives change detection,
+ * so ngModel, *ngIf, pipes, and DI all work in the pop-out.
  */
 
-import { Injectable, NgZone, OnDestroy } from '@angular/core';
+import { Injectable, NgZone, OnDestroy, ApplicationRef, ComponentFactoryResolver, Injector, Type, EventEmitter } from '@angular/core';
+import { DomPortalOutlet, ComponentPortal } from '@angular/cdk/portal';
 import { Subject } from 'rxjs';
 import {
   buildWindowFeatures,
@@ -38,7 +38,10 @@ export class PopOutManagerService implements OnDestroy {
 
   constructor(
     private popOutContext: PopOutContextService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private componentFactoryResolver: ComponentFactoryResolver,
+    private appRef: ApplicationRef,
+    private injector: Injector
   ) {}
 
   initialize(gridId: string): void {
@@ -65,17 +68,24 @@ export class PopOutManagerService implements OnDestroy {
     return Array.from(this.poppedOutPanels);
   }
 
+  /**
+   * Open a pop-out window and render an Angular component into it.
+   *
+   * @param panelId - Unique panel identifier
+   * @param componentType - Angular component class to render
+   * @param data - Data to set on the component instance (key → property)
+   * @param features - Optional window size/position
+   * @returns true if pop-out opened successfully
+   */
   openPopOut(
     panelId: string,
-    panelType: string,
+    componentType: Type<any>,
+    data: Record<string, any>,
     features?: Partial<PopOutWindowFeatures>
   ): boolean {
     if (this.poppedOutPanels.has(panelId)) {
       return false;
     }
-
-    // URL structure: /panel/:gridId/:panelId/:type (vvroom uses /panel prefix)
-    const url = `/panel/${this.gridId}/${panelId}/${panelType}`;
 
     const windowFeatures = buildWindowFeatures({
       width: 1200,
@@ -87,15 +97,44 @@ export class PopOutManagerService implements OnDestroy {
       ...features
     });
 
-    const popoutWindow = window.open(url, `panel-${panelId}`, windowFeatures);
+    const popoutWindow = window.open('about:blank', `panel-${panelId}`, windowFeatures);
 
     if (!popoutWindow) {
       this.blockedSubject.next(panelId);
       return false;
     }
 
+    // Write minimal HTML skeleton (no styles yet — component styles don't exist until attachment)
+    this.writePopoutDocument(popoutWindow);
+
+    // Create CDK portal outlet targeting the popout's body
+    const outlet = new DomPortalOutlet(
+      popoutWindow.document.body,
+      this.componentFactoryResolver,
+      this.appRef,
+      this.injector
+    );
+
+    // Attach component via portal — this triggers Angular to generate component styles
+    const portal = new ComponentPortal(componentType);
+    const componentRef = outlet.attach(portal);
+
+    // NOW copy styles (including the component styles Angular just created)
+    this.copyStylesToPopout(popoutWindow);
+
+    // Set data on component instance
+    if (data) {
+      Object.keys(data).forEach(key => {
+        (componentRef.instance as any)[key] = data[key];
+      });
+    }
+
+    // Wire up @Output() EventEmitters as messages
+    this.wireComponentOutputs(componentRef.instance, panelId);
+
     this.poppedOutPanels.add(panelId);
 
+    // Set up BroadcastChannel for this panel (kept for external consumers)
     const channel = this.popOutContext.createChannelForPanel(panelId);
 
     channel.onmessage = event => {
@@ -104,10 +143,11 @@ export class PopOutManagerService implements OnDestroy {
       });
     };
 
+    // Poll for window close
     const checkInterval = window.setInterval(() => {
       if (popoutWindow.closed) {
         this.ngZone.run(() => {
-          this.handlePopOutClosed(panelId, channel, checkInterval);
+          this.handlePopOutClosed(panelId);
         });
       }
     }, 500);
@@ -117,17 +157,74 @@ export class PopOutManagerService implements OnDestroy {
       channel,
       checkInterval,
       panelId,
-      panelType
+      panelType: componentType.name,
+      outlet,
+      componentRef
     });
 
     return true;
   }
 
   /**
+   * Subscribe to any @Output() EventEmitters on the component instance
+   * and relay them as PopOutMessages through messagesSubject.
+   */
+  private wireComponentOutputs(instance: any, panelId: string): void {
+    // Convention: 'textChanged' output emits { panelId, text }
+    if (instance.textChanged && instance.textChanged instanceof EventEmitter) {
+      instance.textChanged.subscribe((payload: any) => {
+        this.messagesSubject.next({
+          panelId,
+          message: {
+            type: PopOutMessageType.URL_PARAMS_CHANGED,
+            payload: { params: payload },
+            timestamp: Date.now()
+          }
+        });
+      });
+    }
+  }
+
+  /**
+   * Update a property on a popout component instance.
+   */
+  updatePopoutData(panelId: string, key: string, value: any): void {
+    const ref = this.popoutWindows.get(panelId);
+    if (ref?.componentRef) {
+      (ref.componentRef.instance as any)[key] = value;
+    }
+  }
+
+  /**
+   * Write a minimal HTML skeleton into the popout window.
+   * Styles are copied separately AFTER portal attachment (see copyStylesToPopout).
+   */
+  private writePopoutDocument(popoutWindow: Window): void {
+    const doc = popoutWindow.document;
+    doc.open();
+    doc.write('<!DOCTYPE html><html><head></head><body></body></html>');
+    doc.close();
+
+    // Set base styles on body
+    doc.body.style.margin = '0';
+    doc.body.style.overflow = 'hidden';
+  }
+
+  /**
+   * Copy all stylesheets and inline styles from parent document to popout.
+   * Must be called AFTER portal attachment so that Angular's component styles
+   * (generated on first instantiation) are present in the parent's <head>.
+   */
+  private copyStylesToPopout(popoutWindow: Window): void {
+    const doc = popoutWindow.document;
+    document.head.querySelectorAll('link[rel="stylesheet"], style').forEach(node => {
+      const clone = doc.importNode(node, true);
+      doc.head.appendChild(clone);
+    });
+  }
+
+  /**
    * Broadcast state to all popout windows
-   *
-   * @param state - Application state
-   * @param filterOptionsCache - Optional cached filter options
    */
   broadcastState(state: any, filterOptionsCache?: any): void {
     if (this.popoutWindows.size === 0) {
@@ -155,29 +252,36 @@ export class PopOutManagerService implements OnDestroy {
   closePopOut(panelId: string): void {
     const ref = this.popoutWindows.get(panelId);
     if (ref) {
-      ref.channel.postMessage({
-        type: PopOutMessageType.CLOSE_POPOUT,
-        timestamp: Date.now()
-      });
+      if (ref.window && !ref.window.closed) {
+        ref.window.close();
+      }
+      this.handlePopOutClosed(panelId);
     }
   }
 
   closeAllPopOuts(): void {
-    this.popoutWindows.forEach(({ channel }) => {
-      channel.postMessage({
-        type: PopOutMessageType.CLOSE_POPOUT,
-        timestamp: Date.now()
-      });
+    this.popoutWindows.forEach((ref, panelId) => {
+      if (ref.window && !ref.window.closed) {
+        ref.window.close();
+      }
     });
   }
 
-  private handlePopOutClosed(
-    panelId: string,
-    channel: BroadcastChannel,
-    checkInterval: number
-  ): void {
-    clearInterval(checkInterval);
-    channel.close();
+  private handlePopOutClosed(panelId: string): void {
+    const ref = this.popoutWindows.get(panelId);
+    if (!ref) {
+      return;
+    }
+
+    clearInterval(ref.checkInterval);
+
+    // Detach portal and clean up CDK outlet
+    if (ref.outlet) {
+      ref.outlet.detach();
+      ref.outlet.dispose();
+    }
+
+    ref.channel.close();
     this.popoutWindows.delete(panelId);
     this.poppedOutPanels.delete(panelId);
 
@@ -187,11 +291,15 @@ export class PopOutManagerService implements OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('beforeunload', this.beforeUnloadHandler);
 
-    this.popoutWindows.forEach(({ window: win, channel, checkInterval }) => {
-      clearInterval(checkInterval);
-      channel.close();
-      if (win && !win.closed) {
-        win.close();
+    this.popoutWindows.forEach((ref) => {
+      clearInterval(ref.checkInterval);
+      if (ref.outlet) {
+        ref.outlet.detach();
+        ref.outlet.dispose();
+      }
+      ref.channel.close();
+      if (ref.window && !ref.window.closed) {
+        ref.window.close();
       }
     });
 

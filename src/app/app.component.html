@@ -1,17 +1,17 @@
 <!-- Global Toast Notifications -->
 <p-toast key="app-toast" position="top-right"></p-toast>
 
-<!-- Navigation Banner (hidden in popout) -->
-<header class="app-header" *ngIf="!isPopout">
+<!-- Navigation Banner -->
+<header class="app-header">
   <a routerLink="/" class="home-link">🏠 Home</a>
 </header>
 
 <!-- Application Content -->
-<main class="app-content" [class.with-chrome]="!isPopout">
+<main class="app-content with-chrome">
   <router-outlet></router-outlet>
 </main>
 
-<!-- Footer Bar (hidden in popout) -->
-<footer class="app-footer" *ngIf="!isPopout">
+<!-- Footer Bar -->
+<footer class="app-footer">
   <span class="copyright">© 2026 popout</span>
 </footer>

@@ -4,6 +4,7 @@ import { takeUntil, debounceTime } from 'rxjs/operators';
 import { PopOutManagerService } from '../../framework/services/popout-manager.service';
 import { PopOutContextService } from '../../framework/services/popout-context.service';
 import { PopOutMessageType } from '../../framework/models/popout.interface';
+import { TilePopoutComponent } from '../tile-popout/tile-popout.component';
 
 interface DomainTile {
   id: string;
@@ -63,12 +64,12 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.poppedOutTiles.delete(panelId);
       });
 
-    // Handle messages from popouts (URL_PARAMS_CHANGED)
+    // Handle messages from popouts (textChanged → URL_PARAMS_CHANGED)
     this.popOutManager.messages$
       .pipe(takeUntil(this.destroy$))
       .subscribe(({ panelId, message }) => {
         if (message.type === PopOutMessageType.URL_PARAMS_CHANGED) {
-          const tileId = message.payload?.params?.tile;
+          const tileId = message.payload?.params?.panelId || panelId;
           const text = message.payload?.params?.text || '';
           if (tileId && this.tileInputs.hasOwnProperty(tileId)) {
             this.tileInputs[tileId] = text;
@@ -84,9 +85,9 @@ export class HomeComponent implements OnInit, OnDestroy {
           takeUntil(this.destroy$)
         )
         .subscribe(text => {
-          // If tile is popped out, sync to popout
+          // If tile is popped out, sync text directly to popout component
           if (this.poppedOutTiles.has(tile.id)) {
-            this.popOutManager.broadcastState({ tile: tile.id, text });
+            this.popOutManager.updatePopoutData(tile.id, 'inputText', text);
           }
         });
     });
@@ -113,10 +114,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
 
     const text = this.tileInputs[tile.id] || '';
-    const success = this.popOutManager.openPopOut(tile.id, `tile?text=${encodeURIComponent(text)}`, {
-      width: 400,
-      height: 400
-    });
+    const success = this.popOutManager.openPopOut(
+      tile.id,
+      TilePopoutComponent,
+      { tile, inputText: text, panelId: tile.id },
+      { width: 400, height: 400 }
+    );
 
     if (success) {
       this.poppedOutTiles.add(tile.id);

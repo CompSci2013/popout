@@ -2,7 +2,8 @@
  * Pop-Out Window System Interfaces
  *
  * Type definitions for cross-window communication via BroadcastChannel API.
- * Supports MOVE semantics where panels move between main and pop-out windows.
+ * Supports portal-based rendering where Angular components are projected
+ * into pop-out windows via CDK DomPortalOutlet.
  *
  * @example
  * ```typescript
@@ -194,9 +195,21 @@ export interface PopOutWindowRef {
 
   /**
    * Panel type
-   * Used for routing and component resolution
+   * Component class name or type identifier
    */
   panelType: string;
+
+  /**
+   * CDK Portal outlet targeting the popout window's body.
+   * Used to detach and dispose the portal on close.
+   */
+  outlet?: any;
+
+  /**
+   * Angular ComponentRef for the rendered component.
+   * Allows setting inputs and reading outputs post-creation.
+   */
+  componentRef?: any;
 }
 
 /**

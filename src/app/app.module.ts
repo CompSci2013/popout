@@ -6,6 +6,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { PortalModule } from '@angular/cdk/portal';
 import { MessageService } from 'primeng/api';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -41,6 +42,7 @@ import { PopOutManagerService } from './framework/services/popout-manager.servic
     BrowserAnimationsModule,
     HttpClientModule,
     FormsModule,
+    PortalModule,
     AppRoutingModule,
     PrimengModule
   ],
