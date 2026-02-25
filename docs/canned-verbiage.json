@@ -1,0 +1,26 @@
+{
+  "logic": [
+    "Refactor core business logic for better maintainability",
+    "Optimize data processing pipelines",
+    "Improve error handling and edge-case coverage",
+    "Streamline state transitions in the main controller"
+  ],
+  "ui": [
+    "Enhance component responsiveness and layout",
+    "Refactor UI templates to reduce boilerplate",
+    "Improve user feedback and interaction states",
+    "Standardize styling across modular components"
+  ],
+  "infra": [
+    "Update project configuration and dependencies",
+    "Refactor framework-level services",
+    "Improve application bootstrapping process",
+    "Optimize build configuration and asset loading"
+  ],
+  "fix": [
+    "Resolve regression in state synchronization",
+    "Address inconsistent behavior in edge cases",
+    "Fix resource leak during component destruction",
+    "Patch security vulnerability in input handling"
+  ]
+}
