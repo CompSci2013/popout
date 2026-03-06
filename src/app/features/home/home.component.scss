@@ -95,6 +95,105 @@
     }
   }
 
+  /* Chart Section */
+  .chart-section {
+    max-width: 700px;
+    margin: 0 auto 4rem auto;
+    animation: fadeInUp 0.8s ease-out 0.2s both;
+
+    .chart-card {
+      background: linear-gradient(135deg, #2a2a3e 0%, #1f1f2e 100%);
+      border-radius: 16px;
+      padding: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+
+      .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        h2 {
+          color: #ffffff;
+          font-size: 1.4rem;
+          margin: 0;
+          font-weight: 600;
+        }
+
+        .popout-btn {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 8px;
+          color: #b0b0b0;
+          font-size: 1.2rem;
+          padding: 0.4rem 0.7rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+
+          &:hover {
+            background: rgba(100, 200, 255, 0.15);
+            border-color: rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+          }
+        }
+      }
+    }
+
+    .chart-placeholder {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 3rem 2rem;
+      text-align: center;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+
+      span {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 1.2rem;
+        font-weight: 500;
+      }
+    }
+
+    .range-inputs {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      margin-top: 1rem;
+
+      label {
+        color: #b0b0b0;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        input {
+          width: 80px;
+          padding: 0.5rem 0.75rem;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.05);
+          color: #ffffff;
+          font-size: 0.9rem;
+          transition: all 0.3s ease;
+
+          &:focus {
+            outline: none;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(100, 200, 255, 0.1);
+            box-shadow: 0 0 10px rgba(100, 200, 255, 0.2);
+          }
+        }
+      }
+    }
+  }
+
   /* Domains Section */
   .domains-section {
     margin-bottom: 4rem;

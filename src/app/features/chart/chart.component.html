@@ -1,0 +1,16 @@
+<div class="parabola-chart">
+  <div class="chart-toolbar">
+    <button class="reset-btn" (click)="onReset()" title="Reset to defaults">Reset</button>
+  </div>
+  <div #chart class="chart-container"></div>
+  <div class="range-inputs">
+    <label>
+      Min
+      <input type="number" [(ngModel)]="plotMin" (ngModelChange)="onRangeChange()" step="0.5">
+    </label>
+    <label>
+      Max
+      <input type="number" [(ngModel)]="plotMax" (ngModelChange)="onRangeChange()" step="0.5">
+    </label>
+  </div>
+</div>

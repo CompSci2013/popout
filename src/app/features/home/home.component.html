@@ -5,6 +5,42 @@
     <p class="subtitle">Explore data across multiple domains</p>
   </div>
 
+  <!-- Parabola Chart -->
+  <div class="chart-section">
+    <div class="chart-card" *ngIf="!chartPoppedOut">
+      <div class="chart-header">
+        <h2>Parabola</h2>
+        <button class="popout-btn" (click)="openChartPopOut()" title="Pop out chart">
+          <span>&#8599;</span>
+        </button>
+      </div>
+      <app-parabola-chart></app-parabola-chart>
+      <div class="range-inputs">
+        <label>
+          Min
+          <input type="number" [(ngModel)]="plotMin" (ngModelChange)="onPlotRangeChange()" step="0.5">
+        </label>
+        <label>
+          Max
+          <input type="number" [(ngModel)]="plotMax" (ngModelChange)="onPlotRangeChange()" step="0.5">
+        </label>
+      </div>
+    </div>
+    <div class="chart-placeholder" *ngIf="chartPoppedOut">
+      <span>Parabola (popped out)</span>
+      <div class="range-inputs">
+        <label>
+          Min
+          <input type="number" [(ngModel)]="plotMin" (ngModelChange)="onPlotRangeChange()" step="0.5">
+        </label>
+        <label>
+          Max
+          <input type="number" [(ngModel)]="plotMax" (ngModelChange)="onPlotRangeChange()" step="0.5">
+        </label>
+      </div>
+    </div>
+  </div>
+
   <!-- Domains -->
   <div class="domains-section">
     <div class="domain-grid">

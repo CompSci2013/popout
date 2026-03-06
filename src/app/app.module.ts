@@ -15,7 +15,8 @@ import { PrimengModule } from './primeng.module';
 
 // Feature Components
 import { HomeComponent } from './features/home/home.component';
-import { TilePopoutComponent } from './features/tile-popout/tile-popout.component';
+import { TileComponent } from './features/tile/tile.component';
+import { ParabolaChartComponent } from './features/chart/chart.component';
 
 // Framework Services
 import { UrlStateService } from './framework/services/url-state.service';
@@ -35,7 +36,8 @@ import { PopOutManagerService } from './framework/services/popout-manager.servic
   declarations: [
     AppComponent,
     HomeComponent,
-    TilePopoutComponent
+    TileComponent,
+    ParabolaChartComponent
   ],
   imports: [
     BrowserModule,

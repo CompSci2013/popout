@@ -170,18 +170,21 @@ export class PopOutManagerService implements OnDestroy {
    * and relay them as PopOutMessages through messagesSubject.
    */
   private wireComponentOutputs(instance: any, panelId: string): void {
-    // Convention: 'textChanged' output emits { panelId, text }
-    if (instance.textChanged && instance.textChanged instanceof EventEmitter) {
-      instance.textChanged.subscribe((payload: any) => {
-        this.messagesSubject.next({
-          panelId,
-          message: {
-            type: PopOutMessageType.URL_PARAMS_CHANGED,
-            payload: { params: payload },
-            timestamp: Date.now()
-          }
+    // Scan instance for EventEmitter properties and relay them as messages.
+    // The manager is component-agnostic — it discovers outputs generically.
+    for (const key of Object.keys(instance)) {
+      if (instance[key] instanceof EventEmitter) {
+        instance[key].subscribe((payload: any) => {
+          this.messagesSubject.next({
+            panelId,
+            message: {
+              type: PopOutMessageType.URL_PARAMS_CHANGED,
+              payload: { outputName: key, params: payload },
+              timestamp: Date.now()
+            }
+          });
         });
-      });
+      }
     }
   }
 
@@ -191,7 +194,24 @@ export class PopOutManagerService implements OnDestroy {
   updatePopoutData(panelId: string, key: string, value: any): void {
     const ref = this.popoutWindows.get(panelId);
     if (ref?.componentRef) {
-      (ref.componentRef.instance as any)[key] = value;
+      const instance = ref.componentRef.instance as any;
+      const previousValue = instance[key];
+      instance[key] = value;
+
+      // Direct property assignment bypasses Angular's @Input() binding,
+      // so ngOnChanges won't fire automatically. Invoke it manually.
+      if (instance.ngOnChanges && previousValue !== value) {
+        instance.ngOnChanges({
+          [key]: {
+            previousValue,
+            currentValue: value,
+            firstChange: false,
+            isFirstChange: () => false
+          }
+        });
+      }
+
+      ref.componentRef.changeDetectorRef.detectChanges();
     }
   }
 

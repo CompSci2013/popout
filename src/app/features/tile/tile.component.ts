@@ -10,12 +10,11 @@ export interface DomainTile {
 }
 
 @Component({
-  selector: 'app-tile-popout',
-  templateUrl: './tile-popout.component.html',
-  styleUrls: ['./tile-popout.component.scss']
+  selector: 'app-tile',
+  templateUrl: './tile.component.html',
+  styleUrls: ['./tile.component.scss']
 })
-export class TilePopoutComponent implements OnDestroy {
-  // Set by portal host via popout-manager
+export class TileComponent implements OnDestroy {
   tile: DomainTile | null = null;
   inputText = '';
   panelId = '';

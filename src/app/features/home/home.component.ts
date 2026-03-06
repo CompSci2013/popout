@@ -4,7 +4,9 @@ import { takeUntil, debounceTime } from 'rxjs/operators';
 import { PopOutManagerService } from '../../framework/services/popout-manager.service';
 import { PopOutContextService } from '../../framework/services/popout-context.service';
 import { PopOutMessageType } from '../../framework/models/popout.interface';
-import { TilePopoutComponent } from '../tile-popout/tile-popout.component';
+import { UrlStateService } from '../../framework/services/url-state.service';
+import { TileComponent } from '../tile/tile.component';
+import { ParabolaChartComponent } from '../chart/chart.component';
 
 interface DomainTile {
   id: string;
@@ -13,19 +15,6 @@ interface DomainTile {
   description: string;
 }
 
-/**
- * Home Component - Landing Page
- *
- * Serves as the main entry point and domain selector for the Generic-Prime application.
- * This component provides navigation to various domain-specific modules including
- * Automobile, Physics, Agriculture, Chemistry, and Mathematics.
- *
- * The home page acts as a hub allowing users to select their desired domain of interest
- * and navigate to the corresponding feature modules for data exploration and visualization.
- *
- * @class HomeComponent
- * @since 1.0
- */
 @Component({
     selector: 'app-home',
     templateUrl: './home.component.html',
@@ -43,11 +32,17 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   tileInputs: { [key: string]: string } = {};
   poppedOutTiles = new Set<string>();
+  chartPoppedOut = false;
+  plotMin = -3;
+  plotMax = 3;
 
   private destroy$ = new Subject<void>();
   private inputChanges: { [key: string]: Subject<string> } = {};
 
-  constructor(private popOutManager: PopOutManagerService) {
+  constructor(
+    private popOutManager: PopOutManagerService,
+    private urlState: UrlStateService
+  ) {
     this.tiles.forEach(tile => {
       this.tileInputs[tile.id] = '';
       this.inputChanges[tile.id] = new Subject<string>();
@@ -57,20 +52,38 @@ export class HomeComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.popOutManager.initialize('home');
 
+    // Read URL params to keep inputs in sync
+    this.urlState.watchParams<any>()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        if (params.min !== undefined) this.plotMin = Number(params.min);
+        if (params.max !== undefined) this.plotMax = Number(params.max);
+      });
+
+    // Seed URL with defaults if not present
+    const params = this.urlState.getParams<any>();
+    if (params['min'] === undefined || params['max'] === undefined) {
+      this.urlState.setParams({ min: this.plotMin, max: this.plotMax }, true);
+    }
+
     // Handle popout closed
     this.popOutManager.closed$
       .pipe(takeUntil(this.destroy$))
       .subscribe(panelId => {
         this.poppedOutTiles.delete(panelId);
+        if (panelId === 'parabola') {
+          this.chartPoppedOut = false;
+        }
       });
 
-    // Handle messages from popouts (textChanged → URL_PARAMS_CHANGED)
+    // Handle messages from popouts (tile text changes)
     this.popOutManager.messages$
       .pipe(takeUntil(this.destroy$))
       .subscribe(({ panelId, message }) => {
         if (message.type === PopOutMessageType.URL_PARAMS_CHANGED) {
-          const tileId = message.payload?.params?.panelId || panelId;
-          const text = message.payload?.params?.text || '';
+          const msgParams = message.payload?.params;
+          const tileId = msgParams?.panelId || panelId;
+          const text = msgParams?.text || '';
           if (tileId && this.tileInputs.hasOwnProperty(tileId)) {
             this.tileInputs[tileId] = text;
           }
@@ -85,7 +98,6 @@ export class HomeComponent implements OnInit, OnDestroy {
           takeUntil(this.destroy$)
         )
         .subscribe(text => {
-          // If tile is popped out, sync text directly to popout component
           if (this.poppedOutTiles.has(tile.id)) {
             this.popOutManager.updatePopoutData(tile.id, 'inputText', text);
           }
@@ -103,6 +115,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     return this.poppedOutTiles.has(tileId);
   }
 
+  onPlotRangeChange(): void {
+    this.urlState.setParams({ min: this.plotMin, max: this.plotMax }, true);
+  }
+
   onInputChange(tileId: string, value: string): void {
     this.tileInputs[tileId] = value;
     this.inputChanges[tileId].next(value);
@@ -116,13 +132,28 @@ export class HomeComponent implements OnInit, OnDestroy {
     const text = this.tileInputs[tile.id] || '';
     const success = this.popOutManager.openPopOut(
       tile.id,
-      TilePopoutComponent,
+      TileComponent,
       { tile, inputText: text, panelId: tile.id },
       { width: 400, height: 400 }
     );
 
     if (success) {
       this.poppedOutTiles.add(tile.id);
+    }
+  }
+
+  openChartPopOut(): void {
+    if (this.chartPoppedOut) return;
+
+    const success = this.popOutManager.openPopOut(
+      'parabola',
+      ParabolaChartComponent,
+      {},
+      { width: 700, height: 500 }
+    );
+
+    if (success) {
+      this.chartPoppedOut = true;
     }
   }
 }
