@@ -104,6 +104,15 @@ export class PopOutManagerService implements OnDestroy {
       return false;
     }
 
+    // Give the window focus immediately to ensure it receives events
+    popoutWindow.focus();
+
+    // CRITICAL: about:blank windows do not inherit the parent's Zone.js patching.
+    // We must manually patch the new window's global methods so Angular can track events.
+    if ((window as any).Zone) {
+      (popoutWindow as any).Zone = (window as any).Zone;
+    }
+
     // Write minimal HTML skeleton (no styles yet — component styles don't exist until attachment)
     this.writePopoutDocument(popoutWindow);
 

@@ -27,12 +27,16 @@
   .chart-container {
     width: 100%;
     height: 350px;
+    overflow: hidden; // CRITICAL: Prevents Plotly's invisible drag layer from overflowing
+    position: relative;
   }
 
   .range-inputs {
     display: flex;
     gap: 1.5rem;
     padding: 0.5rem 0;
+    position: relative; // Ensure inputs are above any potential SVG overhang
+    z-index: 10;
 
     label {
       display: flex;
@@ -49,6 +53,7 @@
         background: rgba(255, 255, 255, 0.05);
         color: #ffffff;
         font-size: 0.85rem;
+        pointer-events: auto; // Explicitly enable mouse interaction
 
         &:focus {
           outline: none;
