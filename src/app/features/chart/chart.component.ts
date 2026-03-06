@@ -34,7 +34,8 @@ export class ParabolaChartComponent implements AfterViewInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(data => {
         if (this.rendered) {
-          this.renderChart(data);
+          // Delay by one frame to ensure DOM layout has settled (essential for popouts)
+          requestAnimationFrame(() => this.renderChart(data));
         }
       });
   }
@@ -89,6 +90,12 @@ export class ParabolaChartComponent implements AfterViewInit, OnDestroy {
     }, {
       responsive: true,
       displayModeBar: false
+    }).then(() => {
+      // CRITICAL: Force a resize calculation AFTER Plotly has rendered its SVG.
+      // This solves the measurement race condition in popouts without brittle CSS.
+      if (this.chartEl?.nativeElement) {
+        Plotly.Plots.resize(this.chartEl.nativeElement);
+      }
     });
   }
 }

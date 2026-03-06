@@ -3,7 +3,7 @@
     <button class="reset-btn" (click)="onReset()" title="Reset to defaults">Reset</button>
   </div>
   <div #chart class="chart-container"></div>
-  <div class="range-inputs">
+  <div class="range-inputs" style="position: relative; z-index: 1;">
     <label>
       Min
       <input type="number" [(ngModel)]="plotMin" (ngModelChange)="onRangeChange()" step="0.5">

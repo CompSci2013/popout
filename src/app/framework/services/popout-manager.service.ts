@@ -116,6 +116,10 @@ export class PopOutManagerService implements OnDestroy {
     // Write minimal HTML skeleton (no styles yet — component styles don't exist until attachment)
     this.writePopoutDocument(popoutWindow);
 
+    // 3. Structural Fix: Copy all available styles (themes, globals) BEFORE attachment.
+    // This ensures the base layout context exists before the component starts measuring its DOM.
+    this.copyStylesToPopout(popoutWindow);
+
     // Create CDK portal outlet targeting the popout's body
     const outlet = new DomPortalOutlet(
       popoutWindow.document.body,
@@ -128,7 +132,8 @@ export class PopOutManagerService implements OnDestroy {
     const portal = new ComponentPortal(componentType);
     const componentRef = outlet.attach(portal);
 
-    // NOW copy styles (including the component styles Angular just created)
+    // 4. Update styles again AFTER attachment to catch component-specific scoped styles
+    // that Angular adds to the parent <head> upon instantiation.
     this.copyStylesToPopout(popoutWindow);
 
     // Set data on component instance
