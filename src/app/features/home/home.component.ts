@@ -4,9 +4,9 @@ import { takeUntil, debounceTime } from 'rxjs/operators';
 import { PopOutManagerService } from '../../framework/services/popout-manager.service';
 import { PopOutContextService } from '../../framework/services/popout-context.service';
 import { PopOutMessageType } from '../../framework/models/popout.interface';
-import { UrlStateService } from '../../framework/services/url-state.service';
 import { TileComponent } from '../tile/tile.component';
 import { ParabolaChartComponent } from '../chart/chart.component';
+import { ChartService } from '../chart/chart.service';
 
 interface DomainTile {
   id: string;
@@ -41,7 +41,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   constructor(
     private popOutManager: PopOutManagerService,
-    private urlState: UrlStateService
+    private chartService: ChartService
   ) {
     this.tiles.forEach(tile => {
       this.tileInputs[tile.id] = '';
@@ -52,19 +52,13 @@ export class HomeComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.popOutManager.initialize('home');
 
-    // Read URL params to keep inputs in sync
-    this.urlState.watchParams<any>()
+    // Sync chart params from service
+    this.chartService.params$
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
-        if (params.min !== undefined) this.plotMin = Number(params.min);
-        if (params.max !== undefined) this.plotMax = Number(params.max);
+        this.plotMin = params.min;
+        this.plotMax = params.max;
       });
-
-    // Seed URL with defaults if not present
-    const params = this.urlState.getParams<any>();
-    if (params['min'] === undefined || params['max'] === undefined) {
-      this.urlState.setParams({ min: this.plotMin, max: this.plotMax }, true);
-    }
 
     // Handle popout closed
     this.popOutManager.closed$
@@ -116,7 +110,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   onPlotRangeChange(): void {
-    this.urlState.setParams({ min: this.plotMin, max: this.plotMax }, true);
+    this.chartService.updateRange(this.plotMin, this.plotMax);
   }
 
   onInputChange(tileId: string, value: string): void {
