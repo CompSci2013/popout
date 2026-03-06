@@ -15,29 +15,19 @@
         </button>
       </div>
       <app-parabola-chart></app-parabola-chart>
-      <div class="range-inputs">
-        <label>
-          Min
-          <input type="number" [(ngModel)]="plotMin" (ngModelChange)="onPlotRangeChange()" step="0.5">
-        </label>
-        <label>
-          Max
-          <input type="number" [(ngModel)]="plotMax" (ngModelChange)="onPlotRangeChange()" step="0.5">
-        </label>
-      </div>
     </div>
     <div class="chart-placeholder" *ngIf="chartPoppedOut">
       <span>Parabola (popped out)</span>
-      <div class="range-inputs">
-        <label>
-          Min
-          <input type="number" [(ngModel)]="plotMin" (ngModelChange)="onPlotRangeChange()" step="0.5">
-        </label>
-        <label>
-          Max
-          <input type="number" [(ngModel)]="plotMax" (ngModelChange)="onPlotRangeChange()" step="0.5">
-        </label>
-      </div>
+    </div>
+    <div class="range-inputs">
+      <label>
+        Min
+        <input type="number" [(ngModel)]="plotMin" (ngModelChange)="onPlotRangeChange()" step="0.5">
+      </label>
+      <label>
+        Max
+        <input type="number" [(ngModel)]="plotMax" (ngModelChange)="onPlotRangeChange()" step="0.5">
+      </label>
     </div>
   </div>
 
