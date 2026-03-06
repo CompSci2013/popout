@@ -122,10 +122,6 @@ export class PopOutManagerService implements OnDestroy {
     // NOW copy styles (including the component styles Angular just created)
     this.copyStylesToPopout(popoutWindow);
 
-    // Patch popout window so DOM events trigger Angular change detection.
-    // NgZone only patches the parent window's APIs — the popout's are unpatched.
-    this.patchPopoutZone(popoutWindow);
-
     // Set data on component instance
     if (data) {
       Object.keys(data).forEach(key => {
@@ -220,30 +216,6 @@ export class PopOutManagerService implements OnDestroy {
   }
 
   /**
-   * Patch the popout window's event system so callbacks run inside Angular's NgZone.
-   * Without this, user interactions (input, click) in about:blank don't trigger change detection.
-   */
-  private patchPopoutZone(popoutWindow: Window): void {
-    const zone = this.ngZone;
-    const originalAddEventListener = popoutWindow.document.addEventListener.bind(popoutWindow.document);
-
-    popoutWindow.document.addEventListener = function(
-      type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions
-    ) {
-      const wrapped = (event: Event) => {
-        zone.run(() => {
-          if (typeof listener === 'function') {
-            listener(event);
-          } else {
-            listener.handleEvent(event);
-          }
-        });
-      };
-      return originalAddEventListener(type, wrapped, options);
-    } as typeof popoutWindow.document.addEventListener;
-  }
-
-  /**
    * Write a minimal HTML skeleton into the popout window.
    * Styles are copied separately AFTER portal attachment (see copyStylesToPopout).
    */
@@ -255,7 +227,6 @@ export class PopOutManagerService implements OnDestroy {
 
     // Set base styles on body
     doc.body.style.margin = '0';
-    doc.body.style.overflow = 'hidden';
   }
 
   /**
