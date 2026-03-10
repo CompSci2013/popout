@@ -7,6 +7,9 @@
 /* KaTeX CSS for LaTeX rendering in AI chat */
 @import "katex/dist/katex.min.css";
 
+/* Theme definitions — all 4 themes via CSS custom properties */
+@import "themes";
+
 /* Global Styles */
 * {
   box-sizing: border-box;
@@ -15,6 +18,7 @@
 body {
   margin: 0;
   font-family: var(--font-family);
-  background-color: #3c3c3c; // Dark gray background (VS theme)
-  color: #ffffff; // White text for better readability
+  background-color: var(--theme-bg-primary, #3c3c3c);
+  color: var(--theme-text-primary, #ffffff);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

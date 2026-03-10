@@ -20,6 +20,7 @@ import {
   PopOutWindowRef
 } from '../models/popout.interface';
 import { PopOutContextService } from './popout-context.service';
+import { ThemeService } from './theme.service';
 
 @Injectable()
 export class PopOutManagerService implements OnDestroy {
@@ -41,7 +42,8 @@ export class PopOutManagerService implements OnDestroy {
     private ngZone: NgZone,
     private componentFactoryResolver: ComponentFactoryResolver,
     private appRef: ApplicationRef,
-    private injector: Injector
+    private injector: Injector,
+    private themeService: ThemeService
   ) {}
 
   initialize(gridId: string): void {
@@ -135,6 +137,9 @@ export class PopOutManagerService implements OnDestroy {
     // 4. Update styles again AFTER attachment to catch component-specific scoped styles
     // that Angular adds to the parent <head> upon instantiation.
     this.copyStylesToPopout(popoutWindow);
+
+    // 5. Apply current theme to popout window
+    this.themeService.applyToDocument(popoutWindow.document);
 
     // Set data on component instance
     if (data) {

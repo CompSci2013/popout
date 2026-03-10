@@ -1,0 +1,63 @@
+<div class="datatable-container">
+  <div class="table-header">
+    <h2>Component Inventory</h2>
+    <span class="pInputText-wrapper">
+      <input
+        type="text"
+        pInputText
+        [(ngModel)]="globalFilter"
+        placeholder="Search records..."
+        class="filter-input">
+    </span>
+  </div>
+
+  <p-table
+    [value]="records"
+    [columns]="columns"
+    [paginator]="true"
+    [rows]="10"
+    [rowsPerPageOptions]="[5, 10, 25]"
+    [globalFilterFields]="['name', 'category', 'status']"
+    [filterDelay]="300"
+    styleClass="themed-table"
+    [rowHover]="true"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+    #dt>
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th *ngFor="let col of columns"
+            [pSortableColumn]="col.field"
+            [style.width]="col.width || 'auto'">
+          {{ col.header }}
+          <p-sortIcon [field]="col.field"></p-sortIcon>
+        </th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-record>
+      <tr>
+        <td>{{ record.id }}</td>
+        <td>{{ record.name }}</td>
+        <td>{{ record.category }}</td>
+        <td class="value-cell">{{ record.value | number }}</td>
+        <td>
+          <span class="status-badge" [ngClass]="getStatusClass(record.status)">
+            {{ record.status }}
+          </span>
+        </td>
+        <td>{{ record.date }}</td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td [attr.colspan]="columns.length" class="empty-message">
+          No records found.
+        </td>
+      </tr>
+    </ng-template>
+
+  </p-table>
+</div>

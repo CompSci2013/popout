@@ -4,6 +4,17 @@
 <!-- Navigation Banner -->
 <header class="app-header">
   <a routerLink="/" class="home-link">🏠 Home</a>
+  <div class="header-spacer"></div>
+  <div class="theme-selector">
+    <p-dropdown
+      [options]="themes"
+      [(ngModel)]="selectedTheme"
+      optionLabel="label"
+      (onChange)="onThemeChange($event.value)"
+      [style]="{ minWidth: '140px' }"
+      appendTo="body">
+    </p-dropdown>
+  </div>
 </header>
 
 <!-- Application Content -->
@@ -13,5 +24,5 @@
 
 <!-- Footer Bar -->
 <footer class="app-footer">
-  <span class="copyright">© 2026 popout</span>
+  <span class="copyright">&copy; 2026 popout</span>
 </footer>

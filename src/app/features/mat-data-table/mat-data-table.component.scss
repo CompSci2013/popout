@@ -1,0 +1,204 @@
+.mat-datatable-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  animation: fadeInUp 0.6s ease-out;
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+
+    h2 {
+      color: var(--theme-text-primary);
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .filter-input {
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--theme-border);
+      background: var(--theme-bg-input);
+      color: var(--theme-text-primary);
+      font-size: 0.9rem;
+      width: 240px;
+      transition: all 0.3s ease;
+
+      &::placeholder {
+        color: var(--theme-text-placeholder);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--theme-border-focus);
+        box-shadow: 0 0 10px var(--theme-accent-glow);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Material Table Overrides — driven by theme CSS variables
+// ---------------------------------------------------------------------------
+.table-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--theme-table-border);
+  box-shadow: 0 8px 24px var(--theme-shadow);
+}
+
+:host ::ng-deep .themed-mat-table {
+  width: 100%;
+  background: transparent !important;
+
+  .mat-header-row {
+    background: var(--theme-table-header-bg) !important;
+  }
+
+  .mat-header-cell {
+    color: var(--theme-table-header-text) !important;
+    border-bottom-color: var(--theme-table-border) !important;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 16px;
+
+    .mat-sort-header-arrow {
+      color: var(--theme-text-muted) !important;
+    }
+  }
+
+  .mat-row {
+    background: var(--theme-table-row-bg) !important;
+    transition: background 0.2s ease;
+
+    &:nth-child(even) {
+      background: var(--theme-table-row-alt-bg) !important;
+    }
+
+    &:hover {
+      background: var(--theme-table-row-hover-bg) !important;
+    }
+  }
+
+  .mat-cell {
+    color: var(--theme-table-cell-text) !important;
+    border-bottom-color: var(--theme-table-border) !important;
+    font-size: 0.9rem;
+    padding: 0 16px;
+  }
+
+  .no-data-row .mat-cell {
+    text-align: center;
+    padding: 2rem !important;
+    color: var(--theme-text-muted) !important;
+    font-style: italic;
+  }
+}
+
+:host ::ng-deep .mat-paginator {
+  background: var(--theme-table-header-bg) !important;
+  color: var(--theme-text-secondary) !important;
+  border-top: 1px solid var(--theme-table-border);
+  border-radius: 0 0 12px 12px;
+
+  .mat-paginator-range-label {
+    color: var(--theme-text-muted) !important;
+  }
+
+  .mat-icon-button {
+    color: var(--theme-text-secondary) !important;
+
+    &:hover {
+      background: var(--theme-bg-input) !important;
+    }
+
+    &[disabled] {
+      color: var(--theme-text-muted) !important;
+      opacity: 0.4;
+    }
+  }
+
+  .mat-select-value {
+    color: var(--theme-text-primary) !important;
+  }
+
+  .mat-paginator-page-size-label {
+    color: var(--theme-text-muted) !important;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Clearance Bar
+// ---------------------------------------------------------------------------
+.clearance-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100px;
+
+  .clearance-fill {
+    display: block;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--theme-accent-gradient);
+    transition: width 0.3s ease;
+    min-width: 4px;
+  }
+
+  .clearance-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--theme-text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Status Badges
+// ---------------------------------------------------------------------------
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.status-on-duty {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.status-shore-leave {
+  background: rgba(33, 150, 243, 0.15);
+  color: #42a5f5;
+  border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
+.status-suspended {
+  background: rgba(244, 67, 54, 0.15);
+  color: #ef5350;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--theme-text-muted);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -9,6 +9,11 @@ import { FormsModule } from '@angular/forms';
 import { PortalModule } from '@angular/cdk/portal';
 import { MessageService } from 'primeng/api';
 
+// Angular Material
+import { MatTableModule } from '@angular/material/table';
+import { MatSortModule } from '@angular/material/sort';
+import { MatPaginatorModule } from '@angular/material/paginator';
+
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { PrimengModule } from './primeng.module';
@@ -17,27 +22,22 @@ import { PrimengModule } from './primeng.module';
 import { HomeComponent } from './features/home/home.component';
 import { TileComponent } from './features/tile/tile.component';
 import { ParabolaChartComponent } from './features/chart/chart.component';
+import { DataTableComponent } from './features/data-table/data-table.component';
+import { MatDataTableComponent } from './features/mat-data-table/mat-data-table.component';
 
 // Framework Services
 import { UrlStateService } from './framework/services/url-state.service';
 import { PopOutContextService } from './framework/services/popout-context.service';
 import { PopOutManagerService } from './framework/services/popout-manager.service';
 
-/**
- * Root Application Module (AppModule)
- *
- * Minimal popout application demonstrating URL-First architecture.
- * Uses only the core framework services needed for popout functionality.
- *
- * @class AppModule
- * @see AppComponent - Root component
- */
 @NgModule({
   declarations: [
     AppComponent,
     HomeComponent,
     TileComponent,
-    ParabolaChartComponent
+    ParabolaChartComponent,
+    DataTableComponent,
+    MatDataTableComponent
   ],
   imports: [
     BrowserModule,
@@ -46,7 +46,10 @@ import { PopOutManagerService } from './framework/services/popout-manager.servic
     FormsModule,
     PortalModule,
     AppRoutingModule,
-    PrimengModule
+    PrimengModule,
+    MatTableModule,
+    MatSortModule,
+    MatPaginatorModule
   ],
   providers: [
     MessageService,
