@@ -20,7 +20,7 @@ import {
   PopOutWindowRef
 } from '../models/popout.interface';
 import { PopOutContextService } from './popout-context.service';
-import { ThemeService } from './theme.service';
+import { UserPreferencesService, THEMES } from './user-preferences.service';
 
 @Injectable()
 export class PopOutManagerService implements OnDestroy {
@@ -43,7 +43,7 @@ export class PopOutManagerService implements OnDestroy {
     private componentFactoryResolver: ComponentFactoryResolver,
     private appRef: ApplicationRef,
     private injector: Injector,
-    private themeService: ThemeService
+    private userPrefs: UserPreferencesService
   ) {}
 
   initialize(gridId: string): void {
@@ -139,7 +139,7 @@ export class PopOutManagerService implements OnDestroy {
     this.copyStylesToPopout(popoutWindow);
 
     // 5. Apply current theme to popout window
-    this.themeService.applyToDocument(popoutWindow.document);
+    this.applyThemeToDocument(popoutWindow.document);
 
     // Set data on component instance
     if (data) {
@@ -259,6 +259,17 @@ export class PopOutManagerService implements OnDestroy {
       const clone = doc.importNode(node, true);
       doc.head.appendChild(clone);
     });
+  }
+
+  /**
+   * Apply the current theme class to a document (for popout windows).
+   * Replaces the ThemeService.applyToDocument() call — reads the current
+   * theme from UserPreferencesService instead.
+   */
+  private applyThemeToDocument(doc: Document): void {
+    const body = doc.body;
+    THEMES.forEach(t => body.classList.remove(t.cssClass));
+    body.classList.add(this.userPrefs.current.cssClass);
   }
 
   /**
