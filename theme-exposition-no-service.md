@@ -4,11 +4,11 @@
 
 This variant replaces the dedicated `ThemeService` with a `UserPreferencesService` that treats theme preference as user data fetched from (and persisted to) a REST API. Theme switching operates through three cooperating layers:
 
-1. **RxJS subscription** — `AppComponent` subscribes to `UserPreferencesService.theme$` and applies a CSS class on `<body>` as a side-effect
+1. **RxJS subscription** — `AppComponent` subscribes to `UserPreferencesService.getPreference$('theme')`, translates the raw string to a `ThemeOption`, and applies a CSS class on `<body>` as a side-effect
 2. **Material SCSS theming** (`themes.scss`) — uses `@use '@angular/material' as mat` to define palettes and emit component styles per theme
 3. **CSS custom properties** — bridge Material's SCSS output to non-Material elements (custom markup, status badges, layout chrome)
 
-The key difference from the `ThemeService` approach: there is no service whose sole job is managing themes. Instead, theme preference flows through a general-purpose user preferences service, and the body class swap happens in the component's subscription callback.
+The key difference from the `ThemeService` approach: there is no service whose sole job is managing themes. Instead, theme preference flows through a general-purpose user preferences service as a plain key/value string (`"theme" → "dark"`), and the translation to CSS classes plus the body class swap both happen in the UI layer — `AppComponent` and a shared `theme.constants.ts` file.
 
 ---
 
@@ -220,53 +220,123 @@ The **status badges** and **clearance bars** inside table cells are plain HTML �
 
 ## The Theme Switching Mechanism (Without ThemeService)
 
-Instead of a dedicated `ThemeService`, this architecture uses `UserPreferencesService` — a general-purpose service that happens to manage theme preference alongside other user settings. The theme preference is fetched from a REST API on startup and persisted via API call when changed.
+Instead of a dedicated `ThemeService`, this architecture uses `UserPreferencesService` — a general-purpose service that stores generic key/value pairs. It has no knowledge of themes, CSS classes, or the `ThemeOption` interface. The translation from a raw preference string like `"dark"` to a `ThemeOption` with a `cssClass` property happens in the UI layer.
 
-### Step 1: Service fetches user preferences on startup
+### The separation of concerns
+
+```
+UserPreferencesService          theme.constants.ts              AppComponent
+─────────────────────           ──────────────────              ────────────
+Stores: [{ key, value }]        Defines: ThemeOption            Subscribes to raw string
+Exposes: getPreference$()       Exports: THEMES array           Maps string → ThemeOption
+Knows nothing about themes      Shared by App + PopOutManager   Swaps body CSS class
+```
+
+### Step 1: Service fetches generic user preferences on startup
 
 ```typescript
-// user-preferences.service.ts
+// user-preferences.service.ts — knows nothing about themes
+export interface UserPreference {
+  key: string;
+  value: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UserPreferencesService {
-  private preferredTheme$ = new BehaviorSubject<ThemeOption>(THEMES[0]);
-  readonly theme$: Observable<ThemeOption> = this.preferredTheme$.asObservable();
+  private preferences$ = new BehaviorSubject<UserPreference[]>([]);
 
   constructor(private http: HttpClient) {
     this.loadPreferences();
   }
 
+  getPreference$(key: string): Observable<string | undefined> {
+    return this.all$.pipe(
+      map(prefs => prefs.find(p => p.key === key)?.value)
+    );
+  }
+
+  getPreference(key: string): string | undefined {
+    return this.preferences$.value.find(p => p.key === key)?.value;
+  }
+
+  setPreference(key: string, value: string): void {
+    // Update in-memory array, notify subscribers, persist via API
+    const current = [...this.preferences$.value];
+    const idx = current.findIndex(p => p.key === key);
+    if (idx >= 0) current[idx] = { key, value };
+    else current.push({ key, value });
+    this.preferences$.next(current);
+    this.savePreferences(current);
+  }
+
   private loadPreferences(): void {
     // GET /api/user/preferences (faked as a local JSON asset)
-    this.http.get<{ preferredTheme: string }>('assets/user-preferences.json')
+    this.http.get<UserPreference[]>('assets/user-preferences.json')
       .subscribe(prefs => {
-        const match = THEMES.find(t => t.value === prefs.preferredTheme);
-        if (match) this.preferredTheme$.next(match);
+        if (Array.isArray(prefs)) this.preferences$.next(prefs);
       });
   }
 }
 ```
 
-### Step 2: AppComponent subscribes and applies body class
+The API payload is a generic array:
+
+```json
+[
+  { "key": "theme", "value": "dark" },
+  { "key": "language", "value": "en" }
+]
+```
+
+### Step 2: Theme constants define the mapping (UI-layer knowledge)
+
+```typescript
+// framework/constants/theme.constants.ts
+export interface ThemeOption {
+  label: string;
+  value: string;
+  cssClass: string;
+}
+
+export const THEMES: ThemeOption[] = [
+  { label: 'Dark', value: 'dark', cssClass: 'dark-theme' },
+  { label: 'Light', value: 'light', cssClass: 'light-theme' },
+  { label: 'Crimson', value: 'crimson', cssClass: 'crimson-theme' },
+  { label: 'Sapphire', value: 'sapphire', cssClass: 'sapphire-theme' }
+];
+
+export const DEFAULT_THEME = THEMES[0];
+```
+
+This file is imported by `AppComponent` and `PopOutManagerService` — never by `UserPreferencesService`.
+
+### Step 3: AppComponent subscribes, translates, and applies body class
 
 ```typescript
 // app.component.ts
+import { UserPreferencesService } from './framework/services/user-preferences.service';
+import { ThemeOption, THEMES, DEFAULT_THEME } from './framework/constants/theme.constants';
+
 export class AppComponent implements OnInit, OnDestroy {
+  themes: ThemeOption[] = THEMES;
+  selectedTheme: ThemeOption = DEFAULT_THEME;
   private themeSub!: Subscription;
 
   constructor(private userPrefs: UserPreferencesService) {}
 
   ngOnInit(): void {
-    this.themes = this.userPrefs.themes;
-
-    // Subscribe — react whenever preference changes
-    this.themeSub = this.userPrefs.theme$.subscribe(theme => {
+    // Subscribe to the raw "theme" string and translate it here
+    this.themeSub = this.userPrefs.getPreference$('theme').subscribe(themeValue => {
+      const match = THEMES.find(t => t.value === themeValue);
+      const theme = match || DEFAULT_THEME;
       this.selectedTheme = theme;
       this.applyThemeToBody(theme);
     });
   }
 
-  ngOnDestroy(): void {
-    this.themeSub.unsubscribe();
+  onThemeChange(theme: ThemeOption): void {
+    // Persist the raw string — the subscription above reacts and applies it
+    this.userPrefs.setPreference('theme', theme.value);
   }
 
   private applyThemeToBody(theme: ThemeOption): void {
@@ -276,29 +346,7 @@ export class AppComponent implements OnInit, OnDestroy {
 }
 ```
 
-The body class swap is a **side-effect of the RxJS subscription**, not a method call on a theme-specific service. Any component that subscribes to `theme$` gets the current value and all future changes.
-
-### Step 3: User selects a new theme
-
-```typescript
-// app.component.ts
-onThemeChange(theme: ThemeOption): void {
-  this.userPrefs.setPreferredTheme(theme);
-}
-```
-
-```typescript
-// user-preferences.service.ts
-setPreferredTheme(theme: ThemeOption): void {
-  this.preferredTheme$.next(theme);   // notifies all subscribers
-  this.savePreferences(theme.value);  // persists via API
-}
-
-private savePreferences(themeValue: string): void {
-  // PUT /api/user/preferences (faked as console log)
-  console.log(`PUT /api/user/preferences`, { preferredTheme: themeValue });
-}
-```
+The body class swap is a **side-effect of the RxJS subscription**, not a method call on a theme-specific service. The `THEMES.find()` lookup — translating `"sapphire"` into `{ cssClass: 'sapphire-theme' }` — happens here in the component, not in the service.
 
 ### Step 4: Two CSS systems respond simultaneously
 
@@ -309,20 +357,27 @@ private savePreferences(themeValue: string): void {
 
 ### Persistence
 
-Instead of `localStorage`, the preference is persisted via a REST API call (`PUT /api/user/preferences`). On startup, the service fetches the preference (`GET /api/user/preferences`). In this demo, the API is faked — the GET reads from `assets/user-preferences.json`, and the PUT logs to console.
+Instead of `localStorage`, the preference is persisted via a REST API call (`PUT /api/user/preferences`). On startup, the service fetches preferences (`GET /api/user/preferences`). In this demo, the API is faked — the GET reads from `assets/user-preferences.json`, and the PUT logs to console.
 
-In a real application, the API would store the preference in a database tied to the authenticated user. This means theme preference follows the user across devices and browsers, unlike `localStorage` which is device-local.
+The API payload is a generic key/value array — it can carry `theme`, `language`, `timezone`, or any future preference without changing the service interface.
+
+In a real application, the API would store preferences in a database tied to the authenticated user. This means theme preference follows the user across devices and browsers, unlike `localStorage` which is device-local.
 
 ### Popout window support
 
-Child windows opened via `window.open()` get the theme applied to their own `<body>`. Without `ThemeService`, the `PopOutManagerService` reads the current theme directly from `UserPreferencesService`:
+Child windows opened via `window.open()` get the theme applied to their own `<body>`. The `PopOutManagerService` reads the raw preference string and does its own `THEMES.find()` lookup — same constants file, same translation logic:
 
 ```typescript
 // popout-manager.service.ts
+import { UserPreferencesService } from './user-preferences.service';
+import { THEMES, DEFAULT_THEME } from '../constants/theme.constants';
+
 private applyThemeToDocument(doc: Document): void {
   const body = doc.body;
+  const themeValue = this.userPrefs.getPreference('theme');
+  const theme = THEMES.find(t => t.value === themeValue) || DEFAULT_THEME;
   THEMES.forEach(t => body.classList.remove(t.cssClass));
-  body.classList.add(this.userPrefs.current.cssClass);
+  body.classList.add(theme.cssClass);
 }
 ```
 
@@ -332,14 +387,17 @@ private applyThemeToDocument(doc: Document): void {
 
 | Aspect | ThemeService | UserPreferencesService |
 |---|---|---|
-| Who owns theme state? | Dedicated `ThemeService` | General-purpose `UserPreferencesService` |
+| Who owns theme state? | Dedicated `ThemeService` with `BehaviorSubject<ThemeOption>` | General-purpose service with `BehaviorSubject<UserPreference[]>` |
+| Service knows about themes? | Yes — stores `ThemeOption` objects | No — stores generic `{ key, value }` strings |
+| Who translates to CSS class? | `ThemeService.applyTheme()` | `AppComponent` and `PopOutManagerService` (via `theme.constants.ts`) |
 | Who swaps the body class? | `ThemeService.applyTheme()` | `AppComponent` subscription callback |
 | Persistence | `localStorage` (client-only) | REST API (server-side, cross-device) |
-| Theme change notification | `ThemeService.theme$` (BehaviorSubject) | `UserPreferencesService.theme$` (BehaviorSubject) |
-| Initial load | Constructor reads `localStorage` | Constructor fires `HttpClient.get()` |
-| Popout windows | `ThemeService.applyToDocument()` | `PopOutManagerService.applyThemeToDocument()` (reads from `UserPreferencesService.current`) |
+| Theme change notification | `ThemeService.theme$` → `Observable<ThemeOption>` | `getPreference$('theme')` → `Observable<string \| undefined>` |
+| Initial load | Constructor reads `localStorage` | Constructor fires `HttpClient.get()` for all preferences |
+| Popout windows | `ThemeService.applyToDocument()` | `PopOutManagerService.applyThemeToDocument()` with `getPreference('theme')` + lookup |
+| API payload | N/A (client-only) | `[{ "key": "theme", "value": "dark" }, ...]` |
 
-Both approaches produce identical runtime behavior: one body class swap triggers the CSS cascade. The difference is architectural — where the state lives and how it's persisted.
+Both approaches produce identical runtime behavior: one body class swap triggers the CSS cascade. The difference is architectural — where the state lives, who understands what a "theme" is, and how preferences are persisted.
 
 ---
 
@@ -363,19 +421,21 @@ The key optimization: `all-component-themes()` is called once for the default th
 
 ```
 User clicks dropdown
-  → AppComponent.onThemeChange()
-    → UserPreferencesService.setPreferredTheme()
-      → BehaviorSubject.next(sapphireTheme)
-        → AppComponent subscription fires:
-          → document.body.classList = 'sapphire-theme'
-            → CSS specificity activates body.sapphire-theme rules:
-              → mat.all-component-colors() styles take effect on mat-table, mat-paginator, mat-sort
-              → --theme-* custom properties resolve to sapphire values
-                → var() references in component SCSS update (header bg, row colors, borders)
-                → var() references in custom elements update (badges, clearance bars)
-                  → transition: 0.3s ease animates the change
-      → savePreferences('sapphire')
-        → PUT /api/user/preferences { preferredTheme: 'sapphire' }
+  → AppComponent.onThemeChange(sapphireThemeOption)
+    → UserPreferencesService.setPreference('theme', 'sapphire')
+      → preferences$ BehaviorSubject updated: [{ key: 'theme', value: 'sapphire' }, ...]
+        → getPreference$('theme') emits: 'sapphire'
+          → AppComponent subscription fires:
+            → THEMES.find(t => t.value === 'sapphire') → { cssClass: 'sapphire-theme' }
+            → document.body.classList = 'sapphire-theme'
+              → CSS specificity activates body.sapphire-theme rules:
+                → mat.all-component-colors() styles take effect on mat-table, mat-paginator, mat-sort
+                → --theme-* custom properties resolve to sapphire values
+                  → var() references in component SCSS update (header bg, row colors, borders)
+                  → var() references in custom elements update (badges, clearance bars)
+                    → transition: 0.3s ease animates the change
+      → savePreferences([{ key: 'theme', value: 'sapphire' }, ...])
+        → PUT /api/user/preferences [{ "key": "theme", "value": "sapphire" }, ...]
 ```
 
 No JavaScript color calculations. No component re-rendering. One class swap triggers a pure CSS cascade. The API call fires in parallel — it doesn't block the visual update.
