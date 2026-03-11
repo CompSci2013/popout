@@ -1,86 +1,89 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, map } from 'rxjs';
 
 /**
- * Available themes — mirrors the CSS classes defined in themes.scss.
- * No ThemeService dependency; the mapping lives here as plain data.
+ * A single user preference — generic key/value pair.
+ * The service has no knowledge of what "theme" means or how it's applied.
  */
-export interface ThemeOption {
-  label: string;
+export interface UserPreference {
+  key: string;
   value: string;
-  cssClass: string;
 }
-
-export const THEMES: ThemeOption[] = [
-  { label: 'Dark', value: 'dark', cssClass: 'dark-theme' },
-  { label: 'Light', value: 'light', cssClass: 'light-theme' },
-  { label: 'Crimson', value: 'crimson', cssClass: 'crimson-theme' },
-  { label: 'Sapphire', value: 'sapphire', cssClass: 'sapphire-theme' }
-];
 
 const API_URL = 'assets/user-preferences.json';
 
 @Injectable({ providedIn: 'root' })
 export class UserPreferencesService {
-  private preferredTheme$ = new BehaviorSubject<ThemeOption>(THEMES[0]);
+  private preferences$ = new BehaviorSubject<UserPreference[]>([]);
 
-  /** Observable that any component can subscribe to for the current theme. */
-  readonly theme$: Observable<ThemeOption> = this.preferredTheme$.asObservable();
-
-  /** Full list of available themes — for populating dropdowns. */
-  readonly themes: ThemeOption[] = THEMES;
+  /** Observable of all user preferences — subscribe and filter by key. */
+  readonly all$: Observable<UserPreference[]> = this.preferences$.asObservable();
 
   constructor(private http: HttpClient) {
     this.loadPreferences();
   }
 
-  /** Current snapshot — useful for one-time reads (e.g., popout window init). */
-  get current(): ThemeOption {
-    return this.preferredTheme$.value;
+  /**
+   * Get a specific preference value by key.
+   * Returns an Observable that emits whenever that key's value changes.
+   */
+  getPreference$(key: string): Observable<string | undefined> {
+    return this.all$.pipe(
+      map(prefs => prefs.find(p => p.key === key)?.value)
+    );
+  }
+
+  /** Synchronous snapshot of a preference value. */
+  getPreference(key: string): string | undefined {
+    return this.preferences$.value.find(p => p.key === key)?.value;
   }
 
   /**
-   * Called when the user picks a new theme from the dropdown.
-   * Pushes the new value through the BehaviorSubject (subscribers react)
-   * and persists the choice via a fake REST API call.
+   * Update a preference and persist via API.
+   * If the key exists, its value is replaced. If not, a new entry is added.
    */
-  setPreferredTheme(theme: ThemeOption): void {
-    this.preferredTheme$.next(theme);
-    this.savePreferences(theme.value);
+  setPreference(key: string, value: string): void {
+    const current = [...this.preferences$.value];
+    const idx = current.findIndex(p => p.key === key);
+    if (idx >= 0) {
+      current[idx] = { key, value };
+    } else {
+      current.push({ key, value });
+    }
+    this.preferences$.next(current);
+    this.savePreferences(current);
   }
 
   // ---------------------------------------------------------------------------
   // Fake REST API — reads/writes a local JSON asset.
   //
   // In production, these would be real HTTP calls:
-  //   GET  /api/user/preferences
-  //   PUT  /api/user/preferences  { preferredTheme: "dark" }
+  //   GET  /api/user/preferences        → [{ key, value }, ...]
+  //   PUT  /api/user/preferences        → [{ key, value }, ...]
   //
   // Because Angular's dev server serves assets read-only, the PUT is simulated
   // with a console log. The GET works normally via HttpClient.
   // ---------------------------------------------------------------------------
 
   private loadPreferences(): void {
-    this.http.get<{ preferredTheme: string }>(API_URL).subscribe({
+    this.http.get<UserPreference[]>(API_URL).subscribe({
       next: (prefs) => {
-        const match = THEMES.find(t => t.value === prefs.preferredTheme);
-        if (match) {
-          this.preferredTheme$.next(match);
+        if (Array.isArray(prefs)) {
+          this.preferences$.next(prefs);
         }
       },
       error: () => {
-        // First run or missing file — default theme already set via BehaviorSubject seed.
+        // First run or missing file — empty preferences, consumers use defaults.
       }
     });
   }
 
-  private savePreferences(themeValue: string): void {
+  private savePreferences(prefs: UserPreference[]): void {
     // Simulate PUT /api/user/preferences
-    // A real app would do: this.http.put(API_URL, { preferredTheme: themeValue }).subscribe();
     console.log(
       `[UserPreferencesService] PUT ${API_URL}`,
-      JSON.stringify({ preferredTheme: themeValue })
+      JSON.stringify(prefs)
     );
   }
 }

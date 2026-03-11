@@ -1,3 +1,4 @@
-{
-  "preferredTheme": "dark"
-}
+[
+  { "key": "theme", "value": "dark" },
+  { "key": "language", "value": "en" }
+]

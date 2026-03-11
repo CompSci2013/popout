@@ -20,7 +20,8 @@ import {
   PopOutWindowRef
 } from '../models/popout.interface';
 import { PopOutContextService } from './popout-context.service';
-import { UserPreferencesService, THEMES } from './user-preferences.service';
+import { UserPreferencesService } from './user-preferences.service';
+import { THEMES, DEFAULT_THEME } from '../constants/theme.constants';
 
 @Injectable()
 export class PopOutManagerService implements OnDestroy {
@@ -263,13 +264,15 @@ export class PopOutManagerService implements OnDestroy {
 
   /**
    * Apply the current theme class to a document (for popout windows).
-   * Replaces the ThemeService.applyToDocument() call — reads the current
-   * theme from UserPreferencesService instead.
+   * Reads the raw "theme" string from UserPreferencesService, then
+   * translates it using the THEMES constant (UI-layer knowledge).
    */
   private applyThemeToDocument(doc: Document): void {
     const body = doc.body;
+    const themeValue = this.userPrefs.getPreference('theme');
+    const theme = THEMES.find(t => t.value === themeValue) || DEFAULT_THEME;
     THEMES.forEach(t => body.classList.remove(t.cssClass));
-    body.classList.add(this.userPrefs.current.cssClass);
+    body.classList.add(theme.cssClass);
   }
 
   /**
