@@ -1,14 +1,163 @@
 // =============================================================================
-// Theme Definitions — CSS Custom Properties
+// Angular Material 15 SCSS Theming — Proper @use API
 // =============================================================================
-// Each theme sets a full palette via custom properties on body.<theme-class>.
-// Components consume these variables and automatically adapt.
+// Material 15 uses `@use '@angular/material' as mat;` (replacing the deprecated
+// `@import` API from <=13). This file demonstrates:
+//
+//   1. mat.define-palette()      — wrapping a Material palette with contrast
+//   2. mat.define-light-theme()  — assembling color + typography + density
+//   3. mat.define-dark-theme()   — same for dark mode
+//   4. mat.core()                — one-time foundational styles
+//   5. mat.all-component-themes()— applying a theme to all Material components
+//   6. mat.all-component-colors()— swapping just the color layer per theme class
+//   7. mat.define-typography-config() — custom font stacks
+//
+// In v14: these same APIs existed under `@angular/material/theming` with `@import`.
+// In v15: `@use` is the only supported path. `@import` still works but is deprecated.
+// In v16+: `@import` is removed entirely.
+//
+// LEGACY NOTE: This project currently uses `@angular/material/legacy-*` components
+// (auto-migrated by the v15 schematic). The theming API applies identically to both
+// legacy and MDC components — when you later remove the `legacy-` prefix, these
+// theme definitions continue to work unchanged.
 // =============================================================================
 
-// ---------------------------------------------------------------------------
-// Dark Theme (default) — VS Code-inspired dark gray
-// ---------------------------------------------------------------------------
+@use '@angular/material' as mat;
+
+// =============================================================================
+// 1. Typography Configuration
+// =============================================================================
+// mat.define-typography-config() lets you override the entire type scale.
+// v14 used mat-typography-config() (function name changed in v15 to namespaced form).
+//
+// Usage: Pass to the theme definition, or apply standalone via
+//        mat.all-component-typographies($my-typography).
+
+$popout-typography: mat.define-typography-config(
+  $font-family: '"Inter", "Segoe UI", Roboto, sans-serif',
+  $headline-1: mat.define-typography-level(2rem, 2.5rem, 600),
+  $headline-6: mat.define-typography-level(1.1rem, 1.5rem, 600),
+  $body-1:     mat.define-typography-level(0.9rem, 1.4rem, 400),
+  $body-2:     mat.define-typography-level(0.85rem, 1.3rem, 400),
+  $caption:    mat.define-typography-level(0.75rem, 1rem, 400),
+);
+
+// =============================================================================
+// 2. Palette Definitions
+// =============================================================================
+// mat.define-palette($base-palette, $default, $lighter, $darker)
+//
+// In v14: mat-palette() (global function).
+// In v15: mat.define-palette() (namespaced via @use).
+//
+// $mat-blue-gray, $mat-light-blue, etc. are built-in palette maps.
+
+$dark-primary:  mat.define-palette(mat.$blue-gray-palette, 700, 300, 900);
+$dark-accent:   mat.define-palette(mat.$light-blue-palette, A200, A100, A400);
+$dark-warn:     mat.define-palette(mat.$red-palette);
+
+$light-primary: mat.define-palette(mat.$indigo-palette, 500, 100, 700);
+$light-accent:  mat.define-palette(mat.$cyan-palette, A200, A100, A400);
+$light-warn:    mat.define-palette(mat.$red-palette);
+
+$crimson-primary: mat.define-palette(mat.$red-palette, 800, 400, 900);
+$crimson-accent:  mat.define-palette(mat.$deep-orange-palette, A200, A100, A400);
+$crimson-warn:    mat.define-palette(mat.$yellow-palette);
+
+$sapphire-primary: mat.define-palette(mat.$indigo-palette, 800, 300, 900);
+$sapphire-accent:  mat.define-palette(mat.$blue-palette, A200, A100, A400);
+$sapphire-warn:    mat.define-palette(mat.$red-palette);
+
+// =============================================================================
+// 3. Theme Definitions
+// =============================================================================
+// mat.define-dark-theme() / mat.define-light-theme() assemble a complete theme
+// object with color, typography, and density config.
+//
+// In v14: mat-dark-theme() / mat-light-theme() (global functions, map structure).
+// In v15: mat.define-dark-theme() / mat.define-light-theme() — same map structure,
+//         namespaced. Also accepts a config map for typography and density:
+//
+//   mat.define-dark-theme((
+//     color: (primary: $p, accent: $a, warn: $w),
+//     typography: $my-typography,
+//     density: -1,
+//   ))
+
+$dark-theme: mat.define-dark-theme((
+  color: (
+    primary: $dark-primary,
+    accent: $dark-accent,
+    warn: $dark-warn,
+  ),
+  typography: $popout-typography,
+  density: 0,
+));
+
+$light-theme: mat.define-light-theme((
+  color: (
+    primary: $light-primary,
+    accent: $light-accent,
+    warn: $light-warn,
+  ),
+  typography: $popout-typography,
+  density: 0,
+));
+
+$crimson-theme: mat.define-dark-theme((
+  color: (
+    primary: $crimson-primary,
+    accent: $crimson-accent,
+    warn: $crimson-warn,
+  ),
+  typography: $popout-typography,
+  density: 0,
+));
+
+$sapphire-theme: mat.define-dark-theme((
+  color: (
+    primary: $sapphire-primary,
+    accent: $sapphire-accent,
+    warn: $sapphire-warn,
+  ),
+  typography: $popout-typography,
+  density: 0,
+));
+
+// =============================================================================
+// 4. Core Styles (call once)
+// =============================================================================
+// mat.core() emits foundational styles (ripple, overlay, accessibility helpers).
+// Must be called exactly once in the app. In v14, this was @include mat-core().
+
+@include mat.core();
+
+// =============================================================================
+// 5. Default Theme — Dark
+// =============================================================================
+// mat.all-component-themes($theme) emits color + typography + density styles
+// for every Material component. Call this for the default/root theme.
+//
+// In v14: @include angular-material-theme($theme).
+// In v15: @include mat.all-component-themes($theme).
+
+@include mat.all-component-themes($dark-theme);
+
+// =============================================================================
+// 6. Theme Switching via CSS Classes
+// =============================================================================
+// For additional themes, use mat.all-component-colors($theme) to emit ONLY the
+// color overrides (no duplicate typography/density). Wrap in a body class.
+//
+// In v14: @include angular-material-color($theme).
+// In v15: @include mat.all-component-colors($theme).
+//
+// This is the key pattern for runtime theme switching — one class per theme,
+// each emitting only the color diff.
+
 body.dark-theme {
+  // Dark is the default — already applied above. This block provides
+  // CSS custom properties for non-Material components (cards, badges, etc.)
   --theme-bg-primary: #1a1a1a;
   --theme-bg-secondary: #2a2a2a;
   --theme-bg-surface: #2d2d2d;
@@ -37,8 +186,7 @@ body.dark-theme {
   --theme-shadow-hover: rgba(0, 0, 0, 0.5);
   --theme-shadow-accent: rgba(100, 200, 255, 0.15);
 
-  // Table-specific
-  --theme-table-header-bg: #1e1e2e;
+  --theme-table-header-bg: #{mat.get-color-from-palette($dark-primary, 700)};
   --theme-table-header-text: #ffffff;
   --theme-table-row-bg: #2a2a2a;
   --theme-table-row-alt-bg: #242424;
@@ -47,10 +195,10 @@ body.dark-theme {
   --theme-table-cell-text: #e0e0e0;
 }
 
-// ---------------------------------------------------------------------------
-// Light Theme — clean, bright
-// ---------------------------------------------------------------------------
 body.light-theme {
+  // Apply Material light color overrides
+  @include mat.all-component-colors($light-theme);
+
   --theme-bg-primary: #f5f5f5;
   --theme-bg-secondary: #ffffff;
   --theme-bg-surface: #eaeaea;
@@ -79,7 +227,7 @@ body.light-theme {
   --theme-shadow-hover: rgba(0, 0, 0, 0.12);
   --theme-shadow-accent: rgba(0, 112, 192, 0.1);
 
-  --theme-table-header-bg: #e8edf2;
+  --theme-table-header-bg: #{mat.get-color-from-palette($light-primary, 100)};
   --theme-table-header-text: #1a1a1a;
   --theme-table-row-bg: #ffffff;
   --theme-table-row-alt-bg: #f8f9fa;
@@ -88,10 +236,10 @@ body.light-theme {
   --theme-table-cell-text: #333333;
 }
 
-// ---------------------------------------------------------------------------
-// Crimson Theme — deep red, dramatic
-// ---------------------------------------------------------------------------
 body.crimson-theme {
+  // Apply Material crimson color overrides
+  @include mat.all-component-colors($crimson-theme);
+
   --theme-bg-primary: #1a0a0a;
   --theme-bg-secondary: #2a1515;
   --theme-bg-surface: #2d1a1a;
@@ -120,7 +268,7 @@ body.crimson-theme {
   --theme-shadow-hover: rgba(80, 0, 0, 0.5);
   --theme-shadow-accent: rgba(224, 85, 85, 0.15);
 
-  --theme-table-header-bg: #3a1212;
+  --theme-table-header-bg: #{mat.get-color-from-palette($crimson-primary, 800)};
   --theme-table-header-text: #f0d0d0;
   --theme-table-row-bg: #301818;
   --theme-table-row-alt-bg: #281010;
@@ -129,10 +277,10 @@ body.crimson-theme {
   --theme-table-cell-text: #e0c0c0;
 }
 
-// ---------------------------------------------------------------------------
-// Sapphire Theme — deep royal blue
-// ---------------------------------------------------------------------------
 body.sapphire-theme {
+  // Apply Material sapphire color overrides
+  @include mat.all-component-colors($sapphire-theme);
+
   --theme-bg-primary: #0a0a1a;
   --theme-bg-secondary: #141428;
   --theme-bg-surface: #1a1a30;
@@ -161,7 +309,7 @@ body.sapphire-theme {
   --theme-shadow-hover: rgba(0, 0, 80, 0.5);
   --theme-shadow-accent: rgba(85, 119, 238, 0.15);
 
-  --theme-table-header-bg: #181840;
+  --theme-table-header-bg: #{mat.get-color-from-palette($sapphire-primary, 800)};
   --theme-table-header-text: #d0d8f0;
   --theme-table-row-bg: #1a1a36;
   --theme-table-row-alt-bg: #14142c;
